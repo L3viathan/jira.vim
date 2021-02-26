@@ -188,7 +188,7 @@ def complete_jira(prefix, cmdline):
         # suggest issuetypes
         project = cmdline.split()[1]
         meta = j.createmeta(projectKeys=project)
-        return [issuetype.name for issuetype in meta.issuetypes]
+        return [issuetype.name for issuetype in meta["issuetypes"]]
     # if no dash in prefix: suggest all projects
     if "-" not in prefix or cmdline.startswith("JCreate"):
         to_dash_or_not_to_dash = "" if cmdline.startswith("JCreate") else "-"
