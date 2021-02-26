@@ -1,0 +1,2 @@
+*jira.txt*    A simple jira plugin for Vim
+*jira.vim*
