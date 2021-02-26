@@ -184,7 +184,7 @@ def create_issue(project, issuetype):
     show_issue(issue.key)
 
 def complete_jira(prefix, cmdline):
-    if cmdline.count(" ") = 2:
+    if cmdline.count(" ") == 2:
         # suggest issuetypes
         project = cmdline.split()[1]
         meta = j.createmeta(projectKeys=project)
@@ -207,7 +207,7 @@ command! -complete=customlist,CompleteJira -nargs=1 JIssue :py3 show_issue(<f-ar
 command! JList :py3 show_list('assignee = currentUser() AND status != closed')
 command! -nargs=+ JSearch :py3 show_list(<q-args>)
 command! JReload :py3 reload()
-command! -complete=customlist,CompleteJira -nargs=2 JCreate :py3 create_issue(<f-args>)
+command! -complete=customlist,CompleteJira -nargs=+ JCreate :py3 create_issue(<f-args>)
 
 " Ideas for commands: JCreate
 " Todo: Update after editing buffer
