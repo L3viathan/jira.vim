@@ -107,7 +107,7 @@ def open_from_list():
 ENDPYTHON
 
 command! JShow :py3 interactive_show_issue()
-command! JList :py3 show_list('assignee = ps AND status != closed')
+command! JList :py3 show_list('assignee = currentUser() AND status != closed')
 
 " :new to create a buffer
 " :setlocal buftype=nofile nomodifiable bufhidden=delete
