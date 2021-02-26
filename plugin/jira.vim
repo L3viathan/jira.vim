@@ -34,6 +34,9 @@ except ImportError:
     pip.main(["install", "jira"])
     import jira
 
+SEPARATOR = "-" * 60
+ADD_COMMENT_TEXT = "To add a comment, write below this line and save:"
+
 def input(message="input"):
     vim.command("call inputsave()")
     vim.command("let user_input = input('" + message + "')")
@@ -75,21 +78,20 @@ def show_issue(issue_key, reuse_buffer=False):
             getattr(fields.resolution, "name", "Unresolved"),
         ),
         "",
-        "-"*60,
+        SEPARATOR,
         "",
     ]
-    # lines.extend(fields.description.replace("\r", "").split("\n"))
-    lines.extend(fields.description.split("\n"))
-    lines.extend(["", "-"*60])
+    lines.extend(fields.description.replace("\r", "").split("\n"))
+    lines.extend(["", SEPARATOR])
     for comment in fields.comment.comments:
         lines.append("")
         lines.extend(
             "[{}] {}".format(
                 comment.author,
-                # comment.body.replace("\r", ""),
-                comment.body,
+                comment.body.replace("\r", ""),
             ).split("\n")
         )
+    lines.extend(["", SEPARATOR, ADD_COMMENT_TEXT, SEPARATOR])
     new_buffer_with_lines(issue_key, lines, reuse_buffer=reuse_buffer)
 
 def new_buffer_with_lines(filename, lines, reuse_buffer=False):
@@ -116,14 +118,16 @@ def show_list(jql):
         lines.append("[{}] {}".format(issue.key, issue.fields.summary))
     new_buffer_with_lines("JIRA issues", lines)
 
-def add_comment(issue_key, comment):
-    ...
-    j.add_comment(issue_key, comment)
-
 def open_issue_under_cursor():
     cword = vim.eval('expand("<cWORD>")')
     issue_key = re.search(r'[A-Z]+-\d+', cword).group()
     show_issue(issue_key)
+
+def reload():
+    _path, filename = os.path.split(vim.current.buffer.name)
+    if re.search(r'[A-Z]+-\d+', filename).group():
+        issue_key = filename
+        show_issue(issue_key, reuse_buffer=True)
 
 def update_issue_from_buffer():
     _path, filename = os.path.split(vim.current.buffer.name)
@@ -144,11 +148,20 @@ def update_issue_from_buffer():
 
         description = []
         for line in vim.current.buffer[5:]:
-            if line == "-"*60:
+            if line == SEPARATOR:
                 description.pop()
                 break
             description.append(line)
         description = "\r\n".join(description)
+
+        new_comment = []
+        for line in reversed(vim.current.buffer):
+            if line == ADD_COMMENT_TEXT and new_comment[0] == SEPARATOR:
+                if len(new_comment) > 1:
+                    j.add_comment(issue_key, "\r\n".join(new_comment[1:]))
+                    something_changed = True
+                break
+            new_comment.insert(0, line)
 
         if assignee != getattr(fields.assignee, "name", ""):
             j.assign_issue(issue, assignee or None)
@@ -158,14 +171,43 @@ def update_issue_from_buffer():
             issue.update(fields={"summary": summary})
             something_changed = True
 
+        if description != fields.description:
+            issue.update(fields={"description": description})
+            something_changed = True
+
         if something_changed:
             show_issue(issue_key, reuse_buffer=True)
 
+def create_issue(project, issuetype):
+    summary = input("{} issue summary: ".format(project))
+    issue = j.create_issue(project=project, summary=summary, description="", issuetype={"name": issuetype})
+    show_issue(issue.key)
+
+def complete_jira(prefix, cmdline):
+    if cmdline.count(" ") = 2:
+        # suggest issuetypes
+        project = cmdline.split()[1]
+        meta = j.createmeta(projectKeys=project)
+        return [issuetype.name for issuetype in meta.issuetypes]
+    # if no dash in prefix: suggest all projects
+    if "-" not in prefix or cmdline.startswith("JCreate"):
+        to_dash_or_not_to_dash = "" if cmdline.startswith("JCreate") else "-"
+        return ["{}{}".format(project.key, to_dash_or_not_to_dash) for project in j.projects() if project.key.startswith(prefix)]
+    else:
+        project = prefix.split("-")[0]
+        return [issue.key for issue in j.search_issues("project = '{}' ORDER BY key DESC".format(project)) if issue.key.startswith(prefix)]
+
 ENDPYTHON
 
-command! JShow :py3 interactive_show_issue()
-command! JList :py3 show_list('assignee = currentUser() AND status != closed')
+function! CompleteJira(arglead, cmdline, cursorpos)
+    return py3eval('complete_jira("' . a:arglead . '", "' . a:cmdline . '")')
+endfunction
 
-" Ideas for mappings: [r]eload, [c]omment, [a]ssign
-" Ideas for commands: JCreate, JSearch
+command! -complete=customlist,CompleteJira -nargs=1 JIssue :py3 show_issue(<f-args>)
+command! JList :py3 show_list('assignee = currentUser() AND status != closed')
+command! -nargs=+ JSearch :py3 show_list(<q-args>)
+command! JReload :py3 reload()
+command! -complete=customlist,CompleteJira -nargs=2 JCreate :py3 create_issue(<f-args>)
+
+" Ideas for commands: JCreate
 " Todo: Update after editing buffer
