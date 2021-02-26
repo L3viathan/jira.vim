@@ -99,7 +99,7 @@ def show_list(jql):
     for issue in j.search_issues(jql):
         lines.append("[{}] {}".format(issue.key, issue.fields.summary))
     new_buffer_with_lines("JIRA list", lines)
-    vim.command("nnoremap <buffer> <cr> :py3 open_from_list()")
+    vim.command("nnoremap <buffer> <cr> :py3 open_from_list()<cr>")
 
 def open_from_list():
     bracketed_issue, _, _summary = vim.current.line.partition(" ")
