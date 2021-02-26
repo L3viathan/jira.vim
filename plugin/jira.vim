@@ -70,7 +70,7 @@ def show_issue(issue_key):
     lines = [
         "{} - {}".format(issue_key, fields.summary),
         "Assignee: {}, Status: {}, Resolution: {}".format(
-            getattr(fields.assignee, "displayName", "Unassigned"),
+            getattr(fields.assignee, "name", "Unassigned"),
             fields.status.name,
             getattr(fields.resolution, "name", "Unresolved"),
         ),
@@ -93,7 +93,7 @@ def show_issue(issue_key):
 def new_buffer_with_lines(filename, lines):
     vim.command("new")
     vim.current.buffer[:] = lines
-    vim.command("setlocal buftype=nofile nomodifiable bufhidden=hide")
+    vim.command("setlocal buftype=nofile modifiable bufhidden=hide")
     vim.command("file {}".format(filename))
     vim.command("only")
     vim.command("nnoremap <buffer> <cr> :py3 open_issue_under_cursor()<cr>")
@@ -109,16 +109,19 @@ def show_list(jql):
         lines.append("[{}] {}".format(issue.key, issue.fields.summary))
     new_buffer_with_lines("JIRA issues", lines)
 
+def add_comment(issue_key, comment):
+    ...
+    j.add_comment(issue_key, comment)
+
 def open_issue_under_cursor():
     cword = vim.eval('expand("<cWORD>")')
     issue_key = re.search(r'[A-Z]+-\d+', cword).group()
     show_issue(issue_key)
 ENDPYTHON
 
-echom "test"
-
 command! JShow :py3 interactive_show_issue()
 command! JList :py3 show_list('assignee = currentUser() AND status != closed')
 
 " Ideas for mappings: [r]eload, [c]omment, [a]ssign
 " Ideas for commands: JCreate, JSearch
+" Todo: Update after editing buffer
