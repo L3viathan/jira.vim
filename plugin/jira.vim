@@ -53,12 +53,10 @@ class DynamicJIRA:
     def __getattr__(self, attr):
         if not self.jira:
             user = vim.eval("g:jira_user").strip()
+            password = os.environ.get("JIRAVIM_PASSWORD") or inputsecret("Jira password for {}: ".format(user))
             self.jira = jira.JIRA(
                 vim.eval("g:jira_host").strip(),
-                auth=(
-                    user,
-                    os.environ.get("JIRAVIM_PASSWORD"),
-                ),
+                auth=(user, password),
             )
         return getattr(self.jira, attr)
 
