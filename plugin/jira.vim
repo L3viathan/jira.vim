@@ -180,15 +180,15 @@ def update_issue_from_buffer():
 
 def create_issue(project, issuetype):
     summary = input("{} issue summary: ".format(project))
-    issue = j.create_issue(project=project, summary=summary, description="", issuetype={"name": issuetype})
+    issue = j.create_issue(project=project, summary=summary, description="(placeholder)", issuetype={"name": issuetype})
     show_issue(issue.key)
 
 def complete_jira(prefix, cmdline):
     if cmdline.count(" ") == 2:
         # suggest issuetypes
         project = cmdline.split()[1]
-        meta = j.createmeta(projectKeys=project)
-        return [issuetype.name for issuetype in meta["issuetypes"]]
+        meta = [p for p in j.createmeta(projectKeys=project)["projects"] if p["key"] == project][0]
+        return [issuetype["name"] for issuetype in meta["issuetypes"]]
     # if no dash in prefix: suggest all projects
     if "-" not in prefix or cmdline.startswith("JCreate"):
         to_dash_or_not_to_dash = "" if cmdline.startswith("JCreate") else "-"
