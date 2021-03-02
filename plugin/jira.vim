@@ -66,34 +66,6 @@ class DynamicJIRA:
 j = DynamicJIRA()
 issue_cache = {}
 
-def show_issue(issue_key, reuse_buffer=False):
-    issue = j.issue(issue_key)
-    fields = issue.fields()
-    issue_cache[issue_key] = (issue, fields)
-    lines = [
-        "{} - {}".format(issue_key, fields.summary),
-        "Assignee: {}, Status: {}, Resolution: {}".format(
-            getattr(fields.assignee, "name", "Unassigned"),
-            fields.status.name,
-            getattr(fields.resolution, "name", "Unresolved"),
-        ),
-        "",
-        SEPARATOR,
-        "",
-    ]
-    lines.extend(fields.description.replace("\r", "").split("\n"))
-    lines.extend(["", SEPARATOR])
-    for comment in fields.comment.comments:
-        lines.append("")
-        lines.extend(
-            "[{}] {}".format(
-                comment.author,
-                comment.body.replace("\r", ""),
-            ).split("\n")
-        )
-    lines.extend(["", SEPARATOR, ADD_COMMENT_TEXT, SEPARATOR])
-    new_buffer_with_lines(issue_key, lines, reuse_buffer=reuse_buffer)
-
 def new_buffer_with_lines(filename, lines, reuse_buffer=False):
     if not reuse_buffer:
         vim.command("new")
@@ -112,22 +84,10 @@ def interactive_show_issue():
     issue_key = input("Enter issue ID: ")
     show_issue(issue_key)
 
-def show_list(jql):
-    lines = []
-    for issue in j.search_issues(jql):
-        lines.append("[{}] {}".format(issue.key, issue.fields.summary))
-    new_buffer_with_lines("JIRA issues", lines)
-
 def open_issue_under_cursor():
     cword = vim.eval('expand("<cWORD>")')
     issue_key = re.search(r'[A-Z]+-\d+', cword).group()
     show_issue(issue_key)
-
-def reload():
-    _path, filename = os.path.split(vim.current.buffer.name)
-    if re.search(r'[A-Z]+-\d+', filename).group():
-        issue_key = filename
-        show_issue(issue_key, reuse_buffer=True)
 
 def update_issue_from_buffer():
     _path, filename = os.path.split(vim.current.buffer.name)
@@ -178,35 +138,100 @@ def update_issue_from_buffer():
         if something_changed:
             show_issue(issue_key, reuse_buffer=True)
 
+def show_issue(issue_key, reuse_buffer=False):
+    issue = j.issue(issue_key)
+    fields = issue.fields()
+    issue_cache[issue_key] = (issue, fields)
+    lines = [
+        "{} - {}".format(issue_key, fields.summary),
+        "Assignee: {}, Status: {}, Resolution: {}".format(
+            getattr(fields.assignee, "name", "Unassigned"),
+            fields.status.name,
+            getattr(fields.resolution, "name", "Unresolved"),
+        ),
+        "",
+        SEPARATOR,
+        "",
+    ]
+    lines.extend(fields.description.replace("\r", "").split("\n"))
+    lines.extend(["", SEPARATOR])
+    for comment in fields.comment.comments:
+        lines.append("")
+        lines.extend(
+            "[{}] {}".format(
+                comment.author,
+                comment.body.replace("\r", ""),
+            ).split("\n")
+        )
+    lines.extend(["", SEPARATOR, ADD_COMMENT_TEXT, SEPARATOR])
+    new_buffer_with_lines(issue_key, lines, reuse_buffer=reuse_buffer)
+
+def show_issues(jql):
+    lines = [
+        "[{}] {}".format(issue.key, issue.fields.summary)
+        for issue in j.search_issues(jql)
+    ]
+    new_buffer_with_lines("JIRA issues", lines)
+
 def create_issue(project, issuetype):
     summary = input("{} issue summary: ".format(project))
-    issue = j.create_issue(project=project, summary=summary, description="(placeholder)", issuetype={"name": issuetype})
+    issue = j.create_issue(
+        project=project,
+        summary=summary,
+        description="(placeholder)",
+        issuetype={"name": issuetype},
+    )
     show_issue(issue.key)
 
-def complete_jira(prefix, cmdline):
+def reload_issue():
+    _path, filename = os.path.split(vim.current.buffer.name)
+    if re.search(r'[A-Z]+-\d+', filename).group():
+        issue_key = filename
+        show_issue(issue_key, reuse_buffer=True)
+
+
+def complete_issue(prefix, cmdline):
     if cmdline.count(" ") == 2:
         # suggest issuetypes
         project = cmdline.split()[1]
-        meta = [p for p in j.createmeta(projectKeys=project)["projects"] if p["key"] == project][0]
-        return [issuetype["name"] for issuetype in meta["issuetypes"] if issuetype["name"].startswith(prefix)]
+        meta = [
+            p
+            for p in j.createmeta(projectKeys=project)["projects"]
+            if p["key"] == project
+        ][0]
+        return [
+            issuetype["name"]
+            for issuetype in meta["issuetypes"]
+            if issuetype["name"].startswith(prefix)
+        ]
     # if no dash in prefix: suggest all projects
     if "-" not in prefix or cmdline.startswith("JCreate"):
+        # auto-complete project only
         to_dash_or_not_to_dash = "" if cmdline.startswith("JCreate") else "-"
-        return ["{}{}".format(project.key, to_dash_or_not_to_dash) for project in j.projects() if project.key.startswith(prefix)]
+        return [
+            "{}{}".format(project.key, to_dash_or_not_to_dash)
+            for project in j.projects() if project.key.startswith(prefix)
+        ]
     else:
+        # auto-complete entire issue (i.e. project and number)
         project = prefix.split("-")[0]
-        return [issue.key for issue in j.search_issues("project = '{}' ORDER BY key DESC".format(project)) if issue.key.startswith(prefix)]
+        jql = "project = '{}' ORDER BY key DESC".format(project)
+        return [
+            issue.key
+            for issue in j.search_issues(jql)
+            if issue.key.startswith(prefix)
+        ]
 
 ENDPYTHON
 
 function! CompleteJira(arglead, cmdline, cursorpos)
-    return py3eval('complete_jira("' . a:arglead . '", "' . a:cmdline . '")')
+    return py3eval('complete_issue("' . a:arglead . '", "' . a:cmdline . '")')
 endfunction
 
 command! -complete=customlist,CompleteJira -nargs=1 JIssue :py3 show_issue(<f-args>)
-command! JList :py3 show_list('assignee = currentUser() AND status != closed')
-command! -nargs=+ JSearch :py3 show_list(<q-args>)
-command! JReload :py3 reload()
+command! JList :py3 show_issues('assignee = currentUser() AND status != closed')
+command! -nargs=+ JSearch :py3 show_issues(<q-args>)
+command! JReload :py3 reload_issue()
 command! -complete=customlist,CompleteJira -nargs=+ JCreate :py3 create_issue(<f-args>)
 
 " Ideas for commands: JCreate
