@@ -190,7 +190,7 @@ def reload_issue():
         show_issue(issue_key, reuse_buffer=True)
 
 
-def complete_issue(prefix, cmdline):
+def complete_jira(prefix, cmdline):
     if cmdline.count(" ") == 2:
         # suggest issuetypes
         project = cmdline.split()[1]
@@ -225,7 +225,7 @@ def complete_issue(prefix, cmdline):
 ENDPYTHON
 
 function! CompleteJira(arglead, cmdline, cursorpos)
-    return py3eval('complete_issue("' . a:arglead . '", "' . a:cmdline . '")')
+    return py3eval('complete_jira("' . a:arglead . '", "' . a:cmdline . '")')
 endfunction
 
 command! -complete=customlist,CompleteJira -nargs=1 JIssue :py3 show_issue(<f-args>)
