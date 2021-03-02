@@ -12,6 +12,10 @@ Clone this repo into `~/.vim/bundle/jira.vim` and put these lines into your
     let g:jira_user = 'your-jira-user'
     let g:jira_host = 'https://your.jira.instance.example'
 
+You will be prompted for your Jira password upon your first usage of the plugin.
+If this annoys you, you can set the environment variable `JIRAVIM_PASSWORD` to
+your Jira password.
+
 ## Usage
 
 ### :JList
