@@ -21,7 +21,7 @@ List non-closed issues assigned to me. In list mode, hit <cr> on an issue to ope
 Search for issues using a JQL query.
 
 ### :JIssue
-Open an existing issue. (Autocomplete for project, then for issue number.)
+Open an existing issue. Requires an issue key like AUSU-1234. (Autocomplete for project, then for issue number.)
 You can edit the follwing fields:
 
  * Summary
@@ -33,4 +33,4 @@ Add new comments at the end of the buffer.
 *Limitations:* comments and workflow cannot be edited (yet).
 
 ### :JCreate
-Create a new issue. (Autocomplete for project, then for issue type.)
+Create a new issue. Requires a project like AUSU, and an issue type like Story. (Autocomplete for project, then for issue type.)
