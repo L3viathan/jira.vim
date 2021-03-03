@@ -124,6 +124,8 @@ def update_issue_from_buffer():
             new_comment.insert(0, line)
 
         if assignee != getattr(fields.assignee, "name", ""):
+            if assignee == "Unassigned":
+                assignee = None
             j.assign_issue(issue, assignee or None)
             something_changed = True
 
