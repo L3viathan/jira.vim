@@ -2,7 +2,7 @@
 " Author: Jonathan Oberländer
 " Created: Wed Feb 17 10:28:59 2021 +0100
 " Requires: Vim Ver8.0+
-" Version 0.1
+" Version 0.2
 "
 " Documentation:
 "   This plugin interfaces with JIRA
@@ -59,7 +59,7 @@ class DynamicJIRA:
             password = os.environ.get("JIRAVIM_PASSWORD") or inputsecret("Jira password for {}: ".format(user))
             self.jira = jira.JIRA(
                 vim.eval("g:jira_host").strip(),
-                auth=(user, password),
+                basic_auth=(user, password),
             )
         return getattr(self.jira, attr)
 
@@ -142,7 +142,7 @@ def update_issue_from_buffer():
 
 def show_issue(issue_key, reuse_buffer=False):
     issue = j.issue(issue_key)
-    fields = issue.fields()
+    fields = issue.fields
     issue_cache[issue_key] = (issue, fields)
     lines = [
         "{} - {}".format(issue_key, fields.summary),
@@ -155,14 +155,14 @@ def show_issue(issue_key, reuse_buffer=False):
         SEPARATOR,
         "",
     ]
-    lines.extend(fields.description.replace("\r", "").split("\n"))
+    lines.extend((fields.description or "").replace("\r", "").split("\n"))
     lines.extend(["", SEPARATOR])
     for comment in fields.comment.comments:
         lines.append("")
         lines.extend(
             "[{}] {}".format(
                 comment.author,
-                comment.body.replace("\r", ""),
+                (comment.body or "").replace("\r", ""),
             ).split("\n")
         )
     lines.extend(["", SEPARATOR, ADD_COMMENT_TEXT, SEPARATOR])
